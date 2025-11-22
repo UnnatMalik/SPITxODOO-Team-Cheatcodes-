@@ -1,8 +1,7 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db import transaction
+from django.db import transaction, models  # <--- Added 'models' here
 from .models import (
     Warehouse, ProductCategory, Product, Stock,
     Receipt, ReceiptItem, DeliveryOrder, DeliveryItem,
@@ -30,7 +29,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 class StockViewSet(viewsets.ModelViewSet):
     queryset = Stock.objects.all()
     serializer_class = StockSerializer
-    filterset_fields = ['warehouse', 'product'] # Enable filtering
+    filterset_fields = ['warehouse', 'product']
 
 # --- OPERATIONS WITH BUSINESS LOGIC ---
 
@@ -40,9 +39,6 @@ class ReceiptViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def validate(self, request, pk=None):
-        """
-        Validates the receipt and updates stock.
-        """
         receipt = self.get_object()
         if receipt.status != Receipt.DRAFT:
             return Response({"error": "Only draft receipts can be validated"}, status=400)
@@ -73,7 +69,6 @@ class ReceiptViewSet(viewsets.ModelViewSet):
 
         return Response({"status": "Receipt Validated", "new_status": receipt.status})
 
-# Viewset for items (to add products to a receipt)
 class ReceiptItemViewSet(viewsets.ModelViewSet):
     queryset = ReceiptItem.objects.all()
     serializer_class = ReceiptItemSerializer
@@ -173,7 +168,6 @@ class StockAdjustmentViewSet(viewsets.ModelViewSet):
     serializer_class = StockAdjustmentSerializer
     
     def perform_create(self, serializer):
-        # Auto-apply adjustment on create
         with transaction.atomic():
             adj = serializer.save()
             stock, _ = Stock.objects.get_or_create(product=adj.product, warehouse=adj.warehouse)
@@ -191,3 +185,32 @@ class StockAdjustmentViewSet(viewsets.ModelViewSet):
 class StockLedgerViewSet(viewsets.ModelViewSet):
     queryset = StockLedger.objects.all().order_by('-created_at')
     serializer_class = StockLedgerSerializer
+
+# --- DASHBOARD API ---
+
+class DashboardStatsViewSet(viewsets.ViewSet):
+    """
+    Returns KPIs for the Dashboard
+    """
+    def list(self, request):
+        # 1. Total Products
+        total_products = Product.objects.count()
+
+        # 2. Low Stock Count
+        # models.F allows us to compare columns within the same database query
+        low_stock_count = Stock.objects.filter(
+            quantity__lt=models.F('product__low_stock_threshold')
+        ).count()
+
+        # 3. Pending Operations
+        pending_receipts = Receipt.objects.filter(status=Receipt.DRAFT).count()
+        pending_deliveries = DeliveryOrder.objects.filter(status=DeliveryOrder.DRAFT).count()
+        pending_transfers = InternalTransfer.objects.filter(status=InternalTransfer.DRAFT).count()
+
+        return Response({
+            "total_products": total_products,
+            "low_stock_items": low_stock_count,
+            "pending_receipts": pending_receipts,
+            "pending_deliveries": pending_deliveries,
+            "pending_transfers": pending_transfers
+        })

@@ -5,8 +5,9 @@ from .views import (
     ReceiptViewSet, ReceiptItemViewSet,
     DeliveryOrderViewSet, DeliveryItemViewSet,
     InternalTransferViewSet, TransferItemViewSet,
-    StockAdjustmentViewSet, StockLedgerViewSet
+    StockAdjustmentViewSet, StockLedgerViewSet, DashboardStatsViewSet
 )
+from .auth_views import signup, login
 
 router = DefaultRouter()
 router.register(r'warehouses', WarehouseViewSet)
@@ -23,7 +24,11 @@ router.register(r'transfers', InternalTransferViewSet)
 router.register(r'transfer-items', TransferItemViewSet)
 router.register(r'adjustments', StockAdjustmentViewSet)
 router.register(r'ledger', StockLedgerViewSet)
+router.register(r'dashboard/stats', DashboardStatsViewSet, basename='dashboard-stats')
+
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('auth/signup/', signup),
+    path('auth/login/', login),
 ]

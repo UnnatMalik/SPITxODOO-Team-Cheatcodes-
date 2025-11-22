@@ -1,23 +1,13 @@
-[00:00:01.013] Server  LOG      ✓ Ready in 674ms
-[00:00:10.596] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:02.359] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:48.418] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:01:48.808] Browser ERROR   `legacyBehavior` is deprecated and will be removed in a future release. A codemod is available to upgrade your components:
+[00:00:00.920] Server  LOG      ✓ Ready in 593ms
+[00:00:06.320] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:08.681] Browser ERROR   Failed to fetch dashboard data: {}
+[00:00:08.681] Browser ERROR   `legacyBehavior` is deprecated and will be removed in a future release. A codemod is available to upgrade your components:
 
 npx @next/codemod@latest new-link .
 
 Learn more: https://nextjs.org/docs/app/building-your-application/upgrading/codemods#remove-a-tags-from-link-components
-[00:05:09.509] Server  LOG      ✓ Compiled in 158ms
-[00:11:23.757] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:11:23.986] Browser ERROR   `legacyBehavior` is deprecated and will be removed in a future release. A codemod is available to upgrade your components:
-
-npx @next/codemod@latest new-link .
-
-Learn more: https://nextjs.org/docs/app/building-your-application/upgrading/codemods#remove-a-tags-from-link-components
-[00:12:55.167] Server  LOG      ✓ Compiled in 115ms
-[00:13:09.967] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:13:10.235] Browser ERROR   `legacyBehavior` is deprecated and will be removed in a future release. A codemod is available to upgrade your components:
-
-npx @next/codemod@latest new-link .
-
-Learn more: https://nextjs.org/docs/app/building-your-application/upgrading/codemods#remove-a-tags-from-link-components
+[00:00:08.681] Browser WARN    Image with src "http://localhost:3000/quicktrace-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[00:00:40.945] Server  LOG      ✓ Compiled in 78ms
+[00:00:49.113] Browser ERROR   Error fetching warehouses {}
+[00:00:49.383] Browser ERROR   Error fetching warehouses {}
+[00:00:53.900] Browser WARN    Image with src "http://localhost:3000/dashboard-screenshot.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.

@@ -77,23 +77,38 @@ export function Sidebar() {
     //   });
     // }
     
-    // As a demonstration, if you store the full user object in localStorage after login:
-    const storedUser = localStorage.getItem('quicktrace_user');
-    if (storedUser) {
-        try {
-            const user = JSON.parse(storedUser);
-            setCurrentUser({
-                // Replace 'name' and 'role' with the actual field names from your stored user object
-                name: user.name || "Authenticated User", 
-                role: user.role || "Unknown Role",
-                initials: getInitials(user.name || "Authenticated User"),
-            });
-        } catch (e) {
-            console.error("Failed to parse user data from storage", e);
-            setCurrentUser(null);
-        }
+    // Check for token first to determine if user is logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+      // If token exists, check for stored user data
+      const storedUser = localStorage.getItem('quicktrace_user');
+      if (storedUser) {
+          try {
+              const user = JSON.parse(storedUser);
+              setCurrentUser({
+                  name: user.name || user.username || "Demo User", 
+                  role: user.role || "Manager",
+                  initials: getInitials(user.name || user.username || "Demo User"),
+              });
+          } catch (e) {
+              console.error("Failed to parse user data from storage", e);
+              // Set dummy user if token exists but user data is corrupted
+              setCurrentUser({
+                  name: "Demo User",
+                  role: "Manager", 
+                  initials: "DU"
+              });
+          }
+      } else {
+          // Set dummy user if token exists but no user data
+          setCurrentUser({
+              name: "Demo User",
+              role: "Manager",
+              initials: "DU"
+          });
+      }
     } else {
-        // If no user is found (e.g., after logout or not logged in)
+        // If no token is found (e.g., after logout or not logged in)
         setCurrentUser(null); 
     }
   }, []); // Run only once on mount to check initial state
@@ -123,9 +138,8 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-64 border-r border-border bg-card flex flex-col p-4 shadow-lg">
       
       {/* Logo/Title */}
-      <div className="flex items-center gap-3 mb-6 p-2">
-        <Image src="https://placehold.co/32x32/1e40af/ffffff/png?text=QT" alt="Logo" width={32} height={32} className="rounded" />
-        <h1 className="text-xl font-bold tracking-tight text-foreground">QuickTrace</h1>
+      <div className="flex flex-col items-center mb-6 p-2">
+        <Image src="/quicktrace-logo.png" alt="QuickTrace Logo" width={180} height={180} className="rounded mb-2" />
       </div>
 
       {/* Navigation Links */}
@@ -173,8 +187,8 @@ export function Sidebar() {
                 className="w-full h-auto p-2 flex justify-between text-foreground hover:bg-muted/60 transition-all"
               >
                 <div className="flex items-center gap-3">
-                  {/* Display user initials */}
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {/* User Profile Icon with initials */}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-md">
                     {currentUser.initials}
                   </div>
                   <div className="text-left min-w-0">

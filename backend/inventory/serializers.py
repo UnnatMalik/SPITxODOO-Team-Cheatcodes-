@@ -7,7 +7,7 @@ from .models import (
 )
 
 # User Serializer
-class UserSerializer(serializers.ModelSerializer):  
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
@@ -35,9 +35,14 @@ class StockSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     sku = serializers.CharField(source='product.sku', read_only=True)
 
+    is_low_stock = serializers.SerializerMethodField()
+
     class Meta:
         model = Stock
         fields = '__all__'
+
+    def get_is_low_stock(self, obj):
+        return obj.quantity < obj.product.low_stock_threshold
 
 # --- Nested Serializers for Operations ---
 # We use these to show items INSIDE the receipt/delivery JSON

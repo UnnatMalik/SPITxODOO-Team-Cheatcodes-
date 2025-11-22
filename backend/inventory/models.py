@@ -1,7 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.core.exceptions import ValidationError
 
-# 1. Common Base Model for Timestamp Tracking
+# 1. Common Base Model
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -27,13 +29,16 @@ class Product(BaseModel):
     name = models.CharField(max_length=150)
     sku = models.CharField(max_length=100, unique=True)
     category = models.ForeignKey(ProductCategory, on_delete=models.SET_NULL, null=True)
-    unit = models.CharField(max_length=50)   # e.g. "kg", "pcs"
+    unit = models.CharField(max_length=50)
+    
+    # --- NEW FIELD ADDED HERE ---
+    low_stock_threshold = models.IntegerField(default=10) 
+    # ----------------------------
 
     def __str__(self):
         return f"{self.name} ({self.sku})"
 
 # 3. Stock Tracking Model
-# Tracks stock in each warehouse.
 class Stock(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
@@ -63,6 +68,31 @@ class Receipt(BaseModel):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=DRAFT)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    def validate_receipt(self):
+        if self.status != self.DRAFT:
+            raise ValidationError("Only draft receipts can be validated.")
+
+        with transaction.atomic():
+            for item in self.items.all():
+                stock, created = Stock.objects.get_or_create(
+                    product=item.product, 
+                    warehouse=self.warehouse
+                )
+                stock.quantity += item.quantity
+                stock.save()
+
+                StockLedger.objects.create(
+                    product=item.product,
+                    warehouse=self.warehouse,
+                    change=item.quantity,
+                    balance=stock.quantity,
+                    source_type='Receipt',
+                    source_id=self.id
+                )
+
+            self.status = self.DONE
+            self.save()
 
     def __str__(self):
         return f"Receipt #{self.id} - {self.supplier}"
@@ -94,6 +124,33 @@ class DeliveryOrder(BaseModel):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=DRAFT)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
+    def validate_delivery(self):
+        if self.status != self.DRAFT:
+            raise ValidationError("Only draft deliveries can be validated.")
+
+        with transaction.atomic():
+            for item in self.items.all():
+                stock = Stock.objects.filter(product=item.product, warehouse=self.warehouse).first()
+                if not stock or stock.quantity < item.quantity:
+                    raise ValidationError(f"Insufficient stock for {item.product.name}")
+
+            self.status = self.DONE
+            self.save()
+
+            for item in self.items.all():
+                stock = Stock.objects.get(product=item.product, warehouse=self.warehouse)
+                stock.quantity -= item.quantity
+                stock.save()
+
+                StockLedger.objects.create(
+                    product=item.product,
+                    warehouse=self.warehouse,
+                    change=-item.quantity,
+                    balance=stock.quantity,
+                    source_type='Delivery',
+                    source_id=self.id
+                )
+
     def __str__(self):
         return f"Delivery #{self.id} - {self.customer}"
 
@@ -106,7 +163,6 @@ class DeliveryItem(BaseModel):
         return f"{self.product.name} - {self.quantity}"
 
 # 6. Internal Transfers
-# Movement between warehouses.
 class InternalTransfer(BaseModel):
     DRAFT = 'draft'
     WAITING = 'waiting'
@@ -150,10 +206,10 @@ class StockLedger(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
 
-    change = models.FloatField()  # +50, -10, +20 etc
-    balance = models.FloatField() # Updated current stock after movement
+    change = models.FloatField() 
+    balance = models.FloatField() 
 
-    source_type = models.CharField(max_length=50)  # receipt / delivery / transfer / adjust
+    source_type = models.CharField(max_length=50)
     source_id = models.IntegerField()
 
     def __str__(self):

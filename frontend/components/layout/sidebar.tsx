@@ -40,7 +40,7 @@ export function Sidebar() {
       {/* Header */}
       <div className="p-6 border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center justify-center hover:opacity-80 transition">
-          <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} className="w-32 h-32" />
+          <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} />
         </Link>
       </div>
 

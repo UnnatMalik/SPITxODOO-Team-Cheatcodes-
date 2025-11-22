@@ -10,7 +10,14 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center">
-            <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} className="w-16 h-16" />
+            {/* Enhanced logo styling for better visibility and alignment */}
+            <Image
+              src="/quicktrace-logo.png"
+              alt="QuickTrace"
+              width={160}
+              height={160}
+              priority
+            />
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-foreground/80 hover:text-foreground transition">
@@ -241,7 +248,14 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center mb-4">
-                <Image src="/quicktrace-logo.png" alt="QuickTrace" width={80} height={80} className="w-12 h-12" />
+                {/* Enhanced logo styling in footer for consistency */}
+                <Image
+                  src="/quicktrace-logo.png"
+                  alt="QuickTrace"
+                  width={120}
+                  height={120}
+                  priority
+                />
               </div>
               <p className="text-sm text-foreground/60">Professional inventory management for modern warehouses</p>
             </div>

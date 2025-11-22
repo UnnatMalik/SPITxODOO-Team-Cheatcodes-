@@ -43,7 +43,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center justify-center mb-4 hover:opacity-80 transition">
-            <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} className="w-24 h-24" />
+            <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} />
           </Link>
           <p className="text-muted-foreground mt-2">Inventory Management System</p>
         </div>

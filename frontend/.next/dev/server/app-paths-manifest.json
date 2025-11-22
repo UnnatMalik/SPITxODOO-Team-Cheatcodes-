@@ -1,10 +1,9 @@
 {
   "/(landing)/page": "app/(landing)/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/adjustments/page": "app/adjustments/page.js",
   "/auth/page": "app/auth/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/deliveries/page": "app/deliveries/page.js",
+  "/products/page": "app/products/page.js",
   "/receipts/page": "app/receipts/page.js",
-  "/transfers/page": "app/transfers/page.js"
+  "/settings/page": "app/settings/page.js"
 }

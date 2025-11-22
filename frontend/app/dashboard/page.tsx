@@ -7,18 +7,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from "recharts"
 
-// Placeholder chart data (until we build history API)
-const dashboardData = [
-  { month: "Jan", receipts: 40, deliveries: 24 },
-  { month: "Feb", receipts: 30, deliveries: 13 },
-  { month: "Mar", receipts: 20, deliveries: 29 },
-  { month: "Apr", receipts: 50, deliveries: 19 },
-]
-const stockDistribution = [
-  { name: "Raw Material", value: 35 },
-  { name: "Finished", value: 25 },
-  { name: "Spares", value: 20 },
-]
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export default function DashboardPage() {
@@ -29,6 +17,8 @@ export default function DashboardPage() {
     pending_deliveries: 0,
     pending_transfers: 0
   })
+  const [operationsData, setOperationsData] = useState([])
+  const [inventoryData, setInventoryData] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -39,27 +29,53 @@ export default function DashboardPage() {
       return
     }
 
-    // 2. Fetch Real Data
-    const fetchStats = async () => {
+    // 2. Fetch All Dashboard Data
+    const fetchDashboardData = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/dashboard/stats/', {
-          headers: {
-            'Authorization': `Token ${token}`, // Send the badge!
-            'Content-Type': 'application/json'
-          }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
+        const [statsResponse, operationsResponse, inventoryResponse] = await Promise.all([
+          fetch('http://127.0.0.1:8000/api/dashboard/', {
+            headers: {
+              'Authorization': `Token ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('http://127.0.0.1:8000/api/dashboard/operations-overview/', {
+            headers: {
+              'Authorization': `Token ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('http://127.0.0.1:8000/api/dashboard/inventory-composition/', {
+            headers: {
+              'Authorization': `Token ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        ])
+
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json()
+          setStats(statsData)
         }
+
+        if (operationsResponse.ok) {
+          const opData = await operationsResponse.json()
+          setOperationsData(opData)
+        }
+
+        if (inventoryResponse.ok) {
+          const invData = await inventoryResponse.json()
+          setInventoryData(invData)
+        }
+
       } catch (error) {
-        console.error("Failed to fetch stats:", error)
+        console.error("Failed to fetch dashboard data:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchStats()
+    fetchDashboardData()
   }, [])
 
   const kpis = [
@@ -109,20 +125,26 @@ export default function DashboardPage() {
           <Card className="lg:col-span-2 border-none shadow-sm">
             <CardHeader>
               <CardTitle>Operations Overview</CardTitle>
-              <CardDescription>Inbound vs Outbound (Last 4 Months)</CardDescription>
+              <CardDescription>Inbound vs Outbound (Last 6 Months)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dashboardData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="receipts" name="Receipts (In)" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="deliveries" name="Deliveries (Out)" fill="#f97316" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {operationsData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={operationsData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="period" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="receipts" name="Receipts (In)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="deliveries" name="Deliveries (Out)" fill="#f97316" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-gray-500">
+                  No operations data available
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -132,22 +154,28 @@ export default function DashboardPage() {
               <CardDescription>By Category</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie 
-                    data={stockDistribution} 
-                    cx="50%" cy="50%" 
-                    innerRadius={60} outerRadius={80} 
-                    paddingAngle={5} dataKey="value"
-                  >
-                    {stockDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={36}/>
-                </PieChart>
-              </ResponsiveContainer>
+              {inventoryData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie 
+                      data={inventoryData} 
+                      cx="50%" cy="50%" 
+                      innerRadius={60} outerRadius={80} 
+                      paddingAngle={5} dataKey="value"
+                    >
+                      {inventoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={36}/>
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-gray-500">
+                  No inventory data available
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

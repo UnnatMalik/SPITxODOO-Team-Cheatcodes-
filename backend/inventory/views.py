@@ -2,6 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction, models  # <--- Added 'models' here
+from django.db.models import Sum
+from datetime import timedelta
+from django.utils import timezone
 from .models import (
     Warehouse, ProductCategory, Product, Stock,
     Receipt, ReceiptItem, DeliveryOrder, DeliveryItem,
@@ -214,3 +217,65 @@ class DashboardStatsViewSet(viewsets.ViewSet):
             "pending_deliveries": pending_deliveries,
             "pending_transfers": pending_transfers
         })
+
+    @action(detail=False, methods=['get'], url_path='operations-overview')
+    def operations_overview(self, request):
+        """
+        Returns monthly operations data for the last 6 months
+        """
+        # Get receipts and deliveries by month
+        operations_data = []
+        
+        for i in range(6):
+            # Calculate the start and end of each month
+            month_start = timezone.now() - timedelta(days=30 * (5-i))
+            month_end = timezone.now() - timedelta(days=30 * (4-i))
+            
+            # Count receipts and deliveries for this month
+            receipts_count = Receipt.objects.filter(
+                created_at__gte=month_start,
+                created_at__lt=month_end,
+                status=Receipt.DONE
+            ).count()
+            
+            deliveries_count = DeliveryOrder.objects.filter(
+                created_at__gte=month_start,
+                created_at__lt=month_end,
+                status=DeliveryOrder.DONE
+            ).count()
+            
+            # Format month name
+            month_name = month_start.strftime("%b %Y")
+            
+            operations_data.append({
+                "period": month_name,
+                "receipts": receipts_count,
+                "deliveries": deliveries_count
+            })
+        
+        return Response(operations_data)
+
+    @action(detail=False, methods=['get'], url_path='inventory-composition')
+    def inventory_composition(self, request):
+        """
+        Returns inventory composition by product category
+        """
+        # Get total quantity by category
+        composition_data = Stock.objects.values(
+            'product__category__name'
+        ).annotate(
+            total_quantity=Sum('quantity')
+        ).filter(
+            total_quantity__gt=0
+        ).order_by('-total_quantity')
+        
+        # Format data for pie chart
+        formatted_data = []
+        for item in composition_data:
+            category_name = item['product__category__name'] or 'Uncategorized'
+            formatted_data.append({
+                "name": category_name,
+                "value": item['total_quantity']
+            })
+        
+        return Response(formatted_data)

@@ -24,7 +24,7 @@ router.register(r'transfers', InternalTransferViewSet)
 router.register(r'transfer-items', TransferItemViewSet)
 router.register(r'adjustments', StockAdjustmentViewSet)
 router.register(r'ledger', StockLedgerViewSet)
-router.register(r'dashboard/stats', DashboardStatsViewSet, basename='dashboard-stats')
+router.register(r'dashboard', DashboardStatsViewSet, basename='dashboard')
 
 
 urlpatterns = [

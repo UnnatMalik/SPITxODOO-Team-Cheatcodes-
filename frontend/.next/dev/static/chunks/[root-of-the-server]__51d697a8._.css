@@ -1075,6 +1075,10 @@
     height: 1.15rem;
   }
 
+  .h-\[300px\] {
+    height: 300px;
+  }
+
   .h-\[calc\(100\%-1px\)\] {
     height: calc(100% - 1px);
   }

@@ -1,164 +1,219 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-const warehouses = [
-  { id: 1, name: "Main Warehouse", location: "Downtown", capacity: 10000, used: 7500 },
-  { id: 2, name: "North Branch", location: "North District", capacity: 5000, used: 3200 },
-  { id: 3, name: "South Branch", location: "South District", capacity: 8000, used: 4800 },
-]
+import { Plus, Loader2, Save, X } from "lucide-react"
 
 export default function SettingsPage() {
-  const [showWarehouseForm, setShowWarehouseForm] = useState(false)
+  const router = useRouter()
+  
+  // --- STATE ---
+  const [warehouses, setWarehouses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  
+  // Form State
+  const [whName, setWhName] = useState("")
+  const [whLocation, setWhLocation] = useState("")
+
+  // --- 1. FETCH DATA ---
+  const fetchWarehouses = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) { router.push("/"); return; }
+      
+      const response = await fetch("http://127.0.0.1:8000/api/warehouses/", {
+        headers: { Authorization: `Token ${token}` },
+      })
+
+      if (response.ok) {
+        setWarehouses(await response.json())
+      }
+    } catch (error) {
+      console.error("Error fetching warehouses", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchWarehouses()
+  }, [router])
+
+  // --- 2. CREATE WAREHOUSE ---
+  const handleCreateWarehouse = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("http://127.0.0.1:8000/api/warehouses/", {
+        method: "POST",
+        headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}` 
+        },
+        body: JSON.stringify({ name: whName, location: whLocation })
+      })
+
+      if (response.ok) {
+        alert("Warehouse Created Successfully!")
+        setIsModalOpen(false)
+        setWhName("")
+        setWhLocation("")
+        fetchWarehouses() // Refresh list
+      } else {
+        alert("Failed to create warehouse")
+      }
+    } catch (error) {
+      alert("Network Error")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // --- 3. MOCK SAVE SETTINGS ---
+  const handleSaveSettings = () => {
+    // In a real app, this would POST to a /api/settings/ endpoint
+    // For the hackathon, we simulate a success to show the UI works.
+    alert("System Settings Saved Successfully!")
+  }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <main className="flex-1 ml-64 overflow-y-auto">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-card border-b border-border p-6">
+      <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-            <p className="text-muted-foreground mt-1">Manage warehouses and system configuration</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+            <p className="text-muted-foreground mt-1">Configure warehouses and system preferences</p>
           </div>
-        </header>
+        </div>
 
-        <div className="p-6 space-y-6">
-          {/* Warehouse Section */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
+        <div className="grid gap-6">
+          {/* Warehouse Management */}
+          <Card className="border-border">
+            <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Warehouses</h2>
-                <p className="text-muted-foreground">Manage your warehouse locations</p>
+                <CardTitle>Warehouse Locations</CardTitle>
+                <CardDescription>Manage physical storage locations</CardDescription>
               </div>
-              <Button
-                onClick={() => setShowWarehouseForm(!showWarehouseForm)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                + Add Warehouse
+              <Button size="sm" onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-2" /> Add Warehouse
               </Button>
-            </div>
-
-            {showWarehouseForm && (
-              <Card className="border-border mb-6">
-                <CardHeader>
-                  <CardTitle>Add New Warehouse</CardTitle>
-                  <CardDescription>Register a new warehouse location</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Warehouse Name</Label>
-                      <Input placeholder="e.g., Main Warehouse" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Location</Label>
-                      <Input placeholder="City/District" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Capacity (units)</Label>
-                      <Input type="number" placeholder="10000" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Address</Label>
-                      <Input placeholder="Full address" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-6">
-                    <Button className="bg-primary hover:bg-primary/90">Add Warehouse</Button>
-                    <Button variant="outline" onClick={() => setShowWarehouseForm(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="border-border">
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b border-border">
-                        <TableHead className="text-foreground">Warehouse Name</TableHead>
-                        <TableHead className="text-foreground">Location</TableHead>
-                        <TableHead className="text-right text-foreground">Capacity</TableHead>
-                        <TableHead className="text-right text-foreground">Used</TableHead>
-                        <TableHead className="text-right text-foreground">Available</TableHead>
-                        <TableHead className="text-right text-foreground">Usage %</TableHead>
-                        <TableHead className="text-right text-foreground">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {warehouses.map((warehouse) => {
-                        const usage = (warehouse.used / warehouse.capacity) * 100
-                        return (
-                          <TableRow key={warehouse.id} className="border-b border-border hover:bg-muted/50">
-                            <TableCell className="font-medium">{warehouse.name}</TableCell>
-                            <TableCell className="text-muted-foreground">{warehouse.location}</TableCell>
-                            <TableCell className="text-right">{warehouse.capacity}</TableCell>
-                            <TableCell className="text-right">{warehouse.used}</TableCell>
-                            <TableCell className="text-right">{warehouse.capacity - warehouse.used}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <div className="w-16 bg-muted rounded-full h-2">
-                                  <div
-                                    className="bg-accent h-2 rounded-full"
-                                    style={{ width: `${Math.min(usage, 100)}%` }}
-                                  />
-                                </div>
-                                <span className="text-sm font-semibold w-10 text-right">{usage.toFixed(0)}%</span>
-                              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                        <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="animate-spin mx-auto"/></TableCell></TableRow>
+                    ) : warehouses.length === 0 ? (
+                        <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No warehouses found.</TableCell></TableRow>
+                    ) : (
+                        warehouses.map((wh) => (
+                        <TableRow key={wh.id}>
+                            <TableCell className="font-mono text-xs">WH-{wh.id}</TableCell>
+                            <TableCell className="font-medium">{wh.name}</TableCell>
+                            <TableCell className="text-muted-foreground">{wh.location || "N/A"}</TableCell>
+                            <TableCell>
+                                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">Active</span>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="sm">
-                                Edit
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                        </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* System Settings */}
+          {/* System Settings (Mock) */}
           <Card className="border-border">
             <CardHeader>
-              <CardTitle>System Settings</CardTitle>
-              <CardDescription>Configure general system preferences</CardDescription>
+              <CardTitle>System Configuration</CardTitle>
+              <CardDescription>General application preferences</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Low Stock Alert Threshold (%)</Label>
-                <Input type="number" placeholder="20" />
-                <p className="text-xs text-muted-foreground">
-                  Alert when stock falls below this percentage of minimum level
-                </p>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Low Stock Alert Threshold</Label>
+                  <Input type="number" placeholder="Default: 10" />
+                  <p className="text-xs text-muted-foreground">Global default for new products</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>System Email</Label>
+                  <Input type="email" placeholder="noreply@quicktrace.com" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Default Reorder Quantity</Label>
-                <Input type="number" placeholder="100" />
+              <div className="flex justify-end">
+                <Button onClick={handleSaveSettings} className="bg-primary hover:bg-primary/90">
+                    <Save className="h-4 w-4 mr-2" /> Save Changes
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label>System Email</Label>
-                <Input type="email" placeholder="noreply@quicktrace.com" />
-              </div>
-              <Button className="bg-primary hover:bg-primary/90">Save Settings</Button>
             </CardContent>
           </Card>
         </div>
       </main>
+
+      {/* --- MODAL: CREATE WAREHOUSE --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg w-full max-w-md border border-border p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add Warehouse</h2>
+              <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <form onSubmit={handleCreateWarehouse} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Warehouse Name</Label>
+                <Input 
+                    placeholder="e.g. North Distribution Center" 
+                    value={whName}
+                    onChange={(e) => setWhName(e.target.value)}
+                    required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Location / Address</Label>
+                <Input 
+                    placeholder="e.g. Building 5, Zone A" 
+                    value={whLocation}
+                    onChange={(e) => setWhLocation(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={isSaving} className="bg-primary">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                  Create
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

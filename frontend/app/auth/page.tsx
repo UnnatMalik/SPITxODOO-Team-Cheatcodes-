@@ -1,39 +1,88 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState } from "react"
-import Image from "next/image"
+
+// UI Components
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader } from "@/components/ui/loader"
-import Link from "next/link"
 
 export default function AuthPage() {
-  const router = useRouter()
   const [authTab, setAuthTab] = useState("login")
   const [isLoading, setIsLoading] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: ""
+  })
 
-  const handleLogin = () => {
-    setIsLoading(true)
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 1500)
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value })
   }
 
-  const handleSignup = () => {
+  // --- LOGIN LOGIC ---
+  const handleLogin = async () => {
     setIsLoading(true)
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 1500)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: formData.email, password: formData.password })
+      })
+      
+      const data = await response.json()
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user_id', data.user_id)
+        window.location.href = "/dashboard"
+      } else {
+        alert(data.error || "Login failed")
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error("Login Error:", error)
+      alert("Backend connection failed. Ensure Django is running on port 8000.")
+      setIsLoading(false)
+    }
+  }
+
+  // --- SIGNUP LOGIC ---
+  const handleSignup = async () => {
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match")
+      return
+    }
+    setIsLoading(true)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/auth/signup/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: formData.email, email: formData.email, password: formData.password })
+      })
+      const data = await response.json()
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token)
+        window.location.href = "/dashboard"
+      } else {
+        alert(data.error || "Signup failed")
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error("Signup Error:", error)
+      alert("Signup failed. Check console.")
+      setIsLoading(false)
+    }
   }
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary flex items-center justify-center p-4">
-        <Loader />
+         <div className="text-xl font-bold animate-pulse">Loading...</div>
       </div>
     )
   }
@@ -42,9 +91,10 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center mb-4 hover:opacity-80 transition">
-            <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} className="w-24 h-24" />
-          </Link>
+          <a href="/" className="inline-flex items-center justify-center mb-4 hover:opacity-80 transition">
+            {/* Using standard img tag for compatibility */}
+            <img src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} className="w-24 h-24 object-contain" />
+          </a>
           <p className="text-muted-foreground mt-2">Inventory Management System</p>
         </div>
 
@@ -62,49 +112,34 @@ export default function AuthPage() {
 
               <TabsContent value="login" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email-login">Email</Label>
-                  <Input id="email-login" type="email" placeholder="you@example.com" />
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="user@example.com" value={formData.email} onChange={handleChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password-login">Password</Label>
-                  <Input id="password-login" type="password" placeholder="••••••••" />
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} />
                 </div>
-                <Button onClick={handleLogin} className="w-full bg-primary hover:bg-primary/90">
-                  Login
-                </Button>
-                <button className="w-full text-sm text-accent hover:text-accent/80 text-center">
-                  Forgot password?
-                </button>
+                <Button onClick={handleLogin} className="w-full bg-primary hover:bg-primary/90">Login</Button>
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" placeholder="John Doe" />
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="user@example.com" value={formData.email} onChange={handleChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email-signup">Email</Label>
-                  <Input id="email-signup" type="email" placeholder="you@example.com" />
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password-signup">Password</Label>
-                  <Input id="password-signup" type="password" placeholder="••••••••" />
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input id="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <Input id="confirm-password" type="password" placeholder="••••••••" />
-                </div>
-                <Button onClick={handleSignup} className="w-full bg-primary hover:bg-primary/90">
-                  Create Account
-                </Button>
+                <Button onClick={handleSignup} className="w-full bg-primary hover:bg-primary/90">Create Account</Button>
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
-
-        <p className="text-xs text-muted-foreground text-center mt-6">
-          By signing in, you agree to our Terms of Service and Privacy Policy
-        </p>
       </div>
     </div>
   )

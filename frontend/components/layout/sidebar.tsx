@@ -2,185 +2,214 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useState } from "react"
+// We keep useEffect here as a necessary React hook
+import { useEffect, useState } from "react" 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, User, Settings } from "lucide-react"
+import { ChevronDown, LogOut, User, Settings } from "lucide-react" 
 import Image from "next/image"
 
-const navigationItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊", section: "main" },
-  { href: "/products", label: "Products", icon: "📦", section: "main" },
-  { href: "/receipts", label: "Receipts", icon: "📥", section: "operations", badge: "3" },
-  { href: "/deliveries", label: "Deliveries", icon: "📤", section: "operations", badge: "2" },
-  { href: "/transfers", label: "Transfers", icon: "🔄", section: "operations" },
-  { href: "/adjustments", label: "Adjustments", icon: "⚙️", section: "inventory" },
-  { href: "/history", label: "Move History", icon: "📜", section: "inventory" },
-  { href: "/settings", label: "Settings", icon: "⚡", section: "system" },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  section: string;
+  badge?: string;
+}
+
+// Data structure for the currently logged-in user
+interface UserData {
+  name: string;
+  role: string;
+  initials: string;
+}
+
+const navigationItems: NavItem[] = [
+  // MAIN
+  { href: "/dashboard", label: "Dashboard", icon: "📊", section: "Main" },
+  { href: "/products", label: "Products", icon: "📦", section: "Main" },
+  
+  // OPERATIONS
+  { href: "/receipts", label: "Receipts", icon: "📥", section: "Operations", badge: "3" }, 
+  { href: "/deliveries", label: "Deliveries", icon: "📤", section: "Operations", badge: "2" }, 
+  { href: "/transfers", label: "Transfers", icon: "🔄", section: "Operations" },
+
+  // INVENTORY
+  { href: "/adjustments", label: "Adjustments", icon: "⚙️", section: "Inventory" },
+  { href: "/history", label: "Move History", icon: "📜", section: "Inventory" },
+
+  // SYSTEM
+  { href: "/settings", label: "Settings", icon: "⚡", section: "System" },
 ]
+
+// Helper function to extract initials for the avatar
+const getInitials = (name: string): string => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return parts.map(n => n.charAt(0).toUpperCase()).join('').slice(0, 2);
+}
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  // --- START: YOUR AUTH INTEGRATION ---
+  
+  // 1. You will need to import your actual authentication hook here, 
+  //    e.g., 'import { useAuth } from "@/hooks/useAuth";'
+  //    Since I don't have it, I'm setting up a temporary state to illustrate.
+
+  // TEMPORARY: Placeholder state to simulate user data fetching
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    // --- IMPORTANT: REPLACE THE FOLLOWING LINES WITH YOUR AUTH LOGIC ---
+    // Instead of this placeholder logic, you will use your real auth context.
+    
+    // Example using a custom hook: 
+    // const { user, isAuthenticated } = useAuth();
+    // if (isAuthenticated) {
+    //   setCurrentUser({
+    //     name: user.full_name, // e.g., fetched from your Django API
+    //     role: user.job_title, // e.g., fetched from your Django API
+    //     initials: getInitials(user.full_name),
+    //   });
+    // }
+    
+    // As a demonstration, if you store the full user object in localStorage after login:
+    const storedUser = localStorage.getItem('quicktrace_user');
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            setCurrentUser({
+                // Replace 'name' and 'role' with the actual field names from your stored user object
+                name: user.name || "Authenticated User", 
+                role: user.role || "Unknown Role",
+                initials: getInitials(user.name || "Authenticated User"),
+            });
+        } catch (e) {
+            console.error("Failed to parse user data from storage", e);
+            setCurrentUser(null);
+        }
+    } else {
+        // If no user is found (e.g., after logout or not logged in)
+        setCurrentUser(null); 
+    }
+  }, []); // Run only once on mount to check initial state
+
+  // --- END: YOUR AUTH INTEGRATION ---
+
+  const sections = Array.from(new Set(navigationItems.map(item => item.section)))
 
   const handleLogout = () => {
+    // 2. Implement your actual sign-out logic here (e.g., calling yourAuthHook.signOut())
+    localStorage.removeItem("quicktrace_user") // Clear stored user data
+    localStorage.removeItem("token")
+    setCurrentUser(null) // Clear user state in the UI
     router.push("/")
   }
 
-  const sections = {
-    main: navigationItems.filter((item) => item.section === "main"),
-    operations: navigationItems.filter((item) => item.section === "operations"),
-    inventory: navigationItems.filter((item) => item.section === "inventory"),
-    system: navigationItems.filter((item) => item.section === "system"),
-  }
+  // Group items by section
+  const groupedItems = navigationItems.reduce((acc, item) => {
+    if (!acc[item.section]) {
+      acc[item.section] = []
+    }
+    acc[item.section].push(item)
+    return acc
+  }, {} as Record<string, NavItem[]>)
 
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border h-screen flex flex-col fixed left-0 top-0 overflow-hidden">
-      {/* Header */}
-      <div className="p-6 border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center justify-center hover:opacity-80 transition">
-          <Image src="/quicktrace-logo.png" alt="QuickTrace" width={120} height={120} className="w-32 h-32" />
-        </Link>
+    <aside className="fixed left-0 top-0 h-full w-64 border-r border-border bg-card flex flex-col p-4 shadow-lg">
+      
+      {/* Logo/Title */}
+      <div className="flex items-center gap-3 mb-6 p-2">
+        <Image src="https://placehold.co/32x32/1e40af/ffffff/png?text=QT" alt="Logo" width={32} height={32} className="rounded" />
+        <h1 className="text-xl font-bold tracking-tight text-foreground">QuickTrace</h1>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Main Navigation */}
-        <div className="space-y-1">
-          {sections.main.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <Button
-                variant={pathname === item.href ? "secondary" : "ghost"}
-                className={`w-full justify-start gap-3 transition-all ${
-                  pathname === item.href
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                }`}
-              >
-                <span className="text-lg flex-shrink-0">{item.icon}</span>
-                <span className="flex-1">{item.label}</span>
-                {item.badge && (
-                  <span className="ml-auto bg-sidebar-primary text-sidebar-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                    {item.badge}
-                  </span>
-                )}
-              </Button>
-            </Link>
-          ))}
-        </div>
-
-        {/* Operations Section */}
-        <div>
-          <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider px-3 mb-2">
-            Operations
-          </p>
-          <div className="space-y-1">
-            {sections.operations.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant={pathname === item.href ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-3 transition-all ${
-                    pathname === item.href
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                  }`}
-                >
-                  <span className="text-lg flex-shrink-0">{item.icon}</span>
-                  <span className="flex-1">{item.label}</span>
-                  {item.badge && (
-                    <span className="ml-auto bg-sidebar-primary text-sidebar-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                      {item.badge}
+      {/* Navigation Links */}
+      <nav className="flex-1 overflow-y-auto space-y-4">
+        {sections.map(section => (
+          <div key={section} className="space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground p-2">{section}</h3>
+            {groupedItems[section].map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link key={item.href} href={item.href} legacyBehavior passHref>
+                  <a
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors duration-150 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    {/* Render the emoji */}
+                    <span className="w-5 h-5 flex items-center justify-center text-xl leading-none">
+                      {item.icon}
                     </span>
-                  )}
-                </Button>
-              </Link>
-            ))}
+                    <span className="font-medium">{item.label}</span>
+                    {/* Render the badge only if it exists */}
+                    {item.badge && (
+                      <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-foreground text-primary dark:bg-primary/20 dark:text-primary-foreground">
+                        {item.badge}
+                      </span>
+                    )}
+                  </a>
+                </Link>
+              )
+            })}
           </div>
-        </div>
-
-        {/* Inventory Management Section */}
-        <div>
-          <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider px-3 mb-2">
-            Inventory
-          </p>
-          <div className="space-y-1">
-            {sections.inventory.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant={pathname === item.href ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-3 transition-all ${
-                    pathname === item.href
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                  }`}
-                >
-                  <span className="text-lg flex-shrink-0">{item.icon}</span>
-                  <span className="flex-1">{item.label}</span>
-                </Button>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* System Section */}
-        <div>
-          <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider px-3 mb-2">System</p>
-          <div className="space-y-1">
-            {sections.system.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant={pathname === item.href ? "secondary" : "ghost"}
-                  className={`w-full justify-start gap-3 transition-all ${
-                    pathname === item.href
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                  }`}
-                >
-                  <span className="text-lg flex-shrink-0">{item.icon}</span>
-                  <span className="flex-1">{item.label}</span>
-                </Button>
-              </Link>
-            ))}
-          </div>
-        </div>
+        ))}
       </nav>
 
-      {/* Profile Menu */}
-      <div className="p-4 border-t border-sidebar-border">
-        <DropdownMenu open={userMenuOpen} onOpenChange={setUserMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-between text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold text-sm flex-shrink-0">
-                  JD
+      {/* User Profile / Logout - Now uses the currentUser state */}
+      <div className="mt-6 pt-4 border-t border-border">
+        {currentUser ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full h-auto p-2 flex justify-between text-foreground hover:bg-muted/60 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Display user initials */}
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {currentUser.initials}
+                  </div>
+                  <div className="text-left min-w-0">
+                    {/* Display user name */}
+                    <p className="text-sm font-medium truncate">{currentUser.name}</p>
+                    {/* Display user role */}
+                    <p className="text-xs text-muted-foreground truncate">{currentUser.role}</p>
+                  </div>
                 </div>
-                <div className="text-left min-w-0">
-                  <p className="text-sm font-medium truncate">John Doe</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">Inventory Mgr</p>
-                </div>
-              </div>
-              <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="cursor-pointer">
+                <User className="w-4 h-4 mr-2" />
+                <span>My Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                <Settings className="w-4 h-4 mr-2" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+                <LogOut className="w-4 h-4 mr-2" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="p-2 text-center text-sm text-muted-foreground">
+            <p>Loading user...</p>
+            <Button variant="link" onClick={() => router.push('/login')} className="p-0 h-auto mt-1">
+                Go to Login
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem className="cursor-pointer">
-              <User className="w-4 h-4 mr-2" />
-              <span>My Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
-              <Settings className="w-4 h-4 mr-2" />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-              <LogOut className="w-4 h-4 mr-2" />
-              <span>Logout</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+        )}
       </div>
     </aside>
   )

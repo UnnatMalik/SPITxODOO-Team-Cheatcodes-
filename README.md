@@ -1,3 +1,7 @@
+<img width="2391" height="841" alt="Gemini_Generated_Image_5fl5l75fl5l75fl5" src="https://github.com/user-attachments/assets/0f28fed1-35a3-4063-a17f-2a6febb1d728" />
+
+
+
 # QuickTrace
 
 > Modern Inventory & Warehouse Management System — Django REST API + Next.js Dashboard
